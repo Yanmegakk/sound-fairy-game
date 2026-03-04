@@ -1,0 +1,31 @@
+Traceback (most recent call last):
+  File "C:\Users\kaede\sound-fairy-game\main.py", line 89, in main
+    app.run()
+  File "C:\Users\kaede\sound-fairy-game\.venv\Lib\site-packages\arcade\application.py", line 440, in run
+    arcade.run()
+  File "C:\Users\kaede\sound-fairy-game\.venv\Lib\site-packages\arcade\window_commands.py", line 152, in run
+    pyglet.app.run(None)
+  File "C:\Users\kaede\sound-fairy-game\.venv\Lib\site-packages\pyglet\app\__init__.py", line 81, in run
+    event_loop.run(interval)
+  File "C:\Users\kaede\sound-fairy-game\.venv\Lib\site-packages\pyglet\app\base.py", line 164, in run
+    timeout = self.idle()
+              ^^^^^^^^^^^
+  File "C:\Users\kaede\sound-fairy-game\.venv\Lib\site-packages\pyglet\app\base.py", line 232, in idle
+    self.clock.call_scheduled_functions(dt)
+  File "C:\Users\kaede\sound-fairy-game\.venv\Lib\site-packages\pyglet\clock.py", line 217, in call_scheduled_functions
+    item.func(now - item.last_ts, *item.args, **item.kwargs)
+  File "C:\Users\kaede\sound-fairy-game\.venv\Lib\site-packages\arcade\application.py", line 556, in _dispatch_frame
+    self.draw(self._accumulated_draw_time)
+  File "C:\Users\kaede\sound-fairy-game\.venv\Lib\site-packages\pyglet\window\__init__.py", line 711, in draw
+    self.dispatch_event('on_draw')
+  File "C:\Users\kaede\sound-fairy-game\.venv\Lib\site-packages\pyglet\window\__init__.py", line 685, in dispatch_event
+    super().dispatch_event(*args)
+  File "C:\Users\kaede\sound-fairy-game\.venv\Lib\site-packages\pyglet\event.py", line 376, in dispatch_event
+    raise e
+  File "C:\Users\kaede\sound-fairy-game\.venv\Lib\site-packages\pyglet\event.py", line 371, in dispatch_event
+    if getattr(self, event_type)(*args):
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kaede\sound-fairy-game\main.py", line 39, in on_draw
+    arcade.clear()
+    ^^^^^^^^^^^^
+AttributeError: module 'arcade' has no attribute 'clear'
