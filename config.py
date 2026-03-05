@@ -8,4 +8,27 @@ PLAYER_RADIUS = 8
 # ===== ゲーム設定 =====
 DISCOVERY_DIST = 50  # 発見と判定する距離
 
+# ===== スター評価設定 =====
+STAR_THRESHOLDS = {
+    5: 10,    # ★★★★★ 10px以内
+    4: 20,    # ★★★★ 20px以内
+    3: 30,    # ★★★ 30px以内
+    2: 40,    # ★★ 40px以内
+    1: 50,    # ★ 50px以内
+}
+
+SCORE_MESSAGES = {
+    5: "Perfect!",
+    4: "Great!",
+    3: "Good",
+    2: "Fair",
+    1: "OK",
+    0: "Missed!",
+}
+
+# 表示色設定
+SCORE_TEXT_COLOR = (255, 255, 100)
+STAR_TEXT_SIZE = 24
+DISTANCE_TEXT_SIZE = 16
+
 

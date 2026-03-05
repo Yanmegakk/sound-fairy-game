@@ -1,6 +1,6 @@
 import numpy as np
 import arcade
-from config import WIDTH, HEIGHT, DISCOVERY_DIST
+from config import WIDTH, HEIGHT, DISCOVERY_DIST, STAR_THRESHOLDS
 
 
 class GameState:
@@ -32,12 +32,35 @@ class GameState:
         return np.linalg.norm(self.target_pos - self.player_pos)
 
     def check_discovery(self):
-        """ターゲット発見の判定"""
+        """ターゲット発見の判定（廃止予定：後方互換性のため保持）"""
+        # 自動判定は行わず、何もしない
+        return False
+
+    def is_near_target(self):
+        """ターゲット範囲内にいるかを判定"""
         dist = self.get_distance()
-        if not self.discovered and dist < DISCOVERY_DIST:
+        return dist < DISCOVERY_DIST
+
+    def confirm_discovery(self):
+        """マウスクリック時にクリアを確定"""
+        if not self.discovered:
             self.discovered = True
             return True
         return False
+
+    def calculate_score_at_discovery(self):
+        """クリック時の距離に基づいてスコアを計算"""
+        if not self.discovered:
+            return 0
+
+        dist = self.get_distance()
+
+        # 距離に応じてスター数を判定
+        for stars in range(5, 0, -1):
+            if dist <= STAR_THRESHOLDS[stars]:
+                return stars
+
+        return 0  # 範囲外（51px以上）
 
     def reset(self):
         """ゲームをリセット"""
