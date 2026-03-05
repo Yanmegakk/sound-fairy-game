@@ -5,13 +5,26 @@ import threading
 import queue
 import os
 from config import (
-    WIDTH, HEIGHT,
-    GRID_SIZES, NUM_SPEAKERS, MAX_LIFE,
-    GRID_CELL_SIZE, GRID_PADDING,
-    GRID_COLOR, GRID_SELECTED_COLOR, GRID_VISITED_COLOR,
-    TEXT_COLOR, TITLE_COLOR, ERROR_COLOR, SUCCESS_COLOR,
-    FONT_SIZE_TITLE, FONT_SIZE_BODY, FONT_SIZE_SMALL,
-    SAMPLE_RATE, VOICES_DIR, SPEAKER_NAMES
+    WIDTH,
+    HEIGHT,
+    GRID_SIZES,
+    NUM_SPEAKERS,
+    MAX_LIFE,
+    GRID_CELL_SIZE,
+    GRID_PADDING,
+    GRID_COLOR,
+    GRID_SELECTED_COLOR,
+    GRID_VISITED_COLOR,
+    TEXT_COLOR,
+    TITLE_COLOR,
+    ERROR_COLOR,
+    SUCCESS_COLOR,
+    FONT_SIZE_TITLE,
+    FONT_SIZE_BODY,
+    FONT_SIZE_SMALL,
+    SAMPLE_RATE,
+    VOICES_DIR,
+    SPEAKER_NAMES,
 )
 from game import GameState
 import sound_manager
@@ -262,7 +275,9 @@ class SoundFairyGame(arcade.Window):
         speakers_data = {}
         voice_type = "game_1" if self.game.current_turn % 2 == 0 else "game_2"
         for speaker_id in range(self.game.num_speakers):
-            audio_data, sample_rate = sound_manager.load_voice_file(speaker_id, voice_type)
+            audio_data, sample_rate = sound_manager.load_voice_file(
+                speaker_id, voice_type
+            )
             if audio_data is not None:
                 speakers_data[speaker_id] = (audio_data, sample_rate)
 
