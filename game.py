@@ -1,68 +1,142 @@
 import numpy as np
-import arcade
-from config import WIDTH, HEIGHT, DISCOVERY_DIST, STAR_THRESHOLDS
+import random
+from config import GRID_SIZES, NUM_SPEAKERS, MAX_LIFE
 
 
 class GameState:
-    """ゲームの状態を管理するクラス"""
+    """ターンベース・グリッド探索ゲームの状態管理"""
 
-    def __init__(self):
-        # プレイヤーの開始位置（マウス位置から更新）
-        self.player_pos = np.array([WIDTH // 2, HEIGHT // 2], dtype=float)
+    def __init__(self, grid_size, num_speakers):
+        """
+        ゲーム状態を初期化
 
-        # ターゲットのランダムな位置
-        self.target_pos = np.array(
-            [
-                np.random.randint(50, WIDTH - 50),
-                np.random.randint(50, HEIGHT - 50),
-            ],
-            dtype=float,
-        )
+        Args:
+            grid_size: グリッドサイズ (3, 5, または 10)
+            num_speakers: 話者数 (1, 2, または 3)
+        """
+        self.grid_size = grid_size
+        self.num_speakers = num_speakers
 
         # ゲーム状態
-        self.discovered = False
+        self.current_turn = 0
+        self.remaining_life = MAX_LIFE
+        self.is_game_over = False
+        self.is_won = False
 
-    def update_player_position_from_mouse(self, mouse_x, mouse_y):
-        """マウス位置からプレイヤー位置を更新"""
-        self.player_pos[0] = np.clip(mouse_x, 0, WIDTH)
-        self.player_pos[1] = np.clip(mouse_y, 0, HEIGHT)
+        # 目標話者とマス
+        self.target_speaker = np.random.randint(0, num_speakers)
+        self.target_pos = (
+            np.random.randint(0, grid_size),
+            np.random.randint(0, grid_size)
+        )
 
-    def get_distance(self):
-        """プレイヤーとターゲット間の距離を取得"""
-        return np.linalg.norm(self.target_pos - self.player_pos)
+        # 話者の位置（ランダム配置、重複なし）
+        self.speaker_positions = self._generate_speaker_positions()
 
-    def check_discovery(self):
-        """ターゲット発見の判定（廃止予定：後方互換性のため保持）"""
-        # 自動判定は行わず、何もしない
-        return False
+        # プレイヤー位置（グリッド中央から開始）
+        self.current_pos = (grid_size // 2, grid_size // 2)
+        self.visited_cells = set()
 
-    def is_near_target(self):
-        """ターゲット範囲内にいるかを判定"""
-        dist = self.get_distance()
-        return dist < DISCOVERY_DIST
+        # ゲーム中の操作モード: "move_only" (移動のみ) または "move_and_confirm" (移動+確定)
+        self.input_mode = "move_only"  # デフォルト
 
-    def confirm_discovery(self):
-        """マウスクリック時にクリアを確定"""
-        if not self.discovered:
-            self.discovered = True
+    def _generate_speaker_positions(self):
+        """
+        話者をグリッド内にランダム配置（重複なし）
+
+        Returns:
+            dict: {speaker_id: (x, y), ...}
+        """
+        positions = {}
+        available_cells = [
+            (x, y) for x in range(self.grid_size) for y in range(self.grid_size)
+        ]
+
+        for speaker_id in range(self.num_speakers):
+            # ランダムにセルを選択
+            cell = random.choice(available_cells)
+            positions[speaker_id] = cell
+            available_cells.remove(cell)
+
+        return positions
+
+    def move_player(self, dx, dy):
+        """
+        プレイヤーを移動（グリッド境界内）
+
+        Args:
+            dx: X方向の移動 (-1, 0, または 1)
+            dy: Y方向の移動 (-1, 0, または 1)
+        """
+        new_x = max(0, min(self.current_pos[0] + dx, self.grid_size - 1))
+        new_y = max(0, min(self.current_pos[1] + dy, self.grid_size - 1))
+        self.current_pos = (new_x, new_y)
+
+    def confirm_cell(self):
+        """
+        現在のマスを確定して判定
+
+        Returns:
+            bool: Trueなら正解、Falseなら不正解
+        """
+        self.visited_cells.add(self.current_pos)
+
+        # 目標話者がいるマスに到達したか判定
+        target_speaker_pos = self.speaker_positions[self.target_speaker]
+        if self.current_pos == target_speaker_pos:
+            # 正解
+            self.is_game_over = True
+            self.is_won = True
+            self.current_turn += 1
             return True
-        return False
+        else:
+            # 不正解
+            self.remaining_life -= 1
+            self.current_turn += 1
 
-    def calculate_score_at_discovery(self):
-        """クリック時の距離に基づいてスコアを計算"""
-        if not self.discovered:
-            return 0
+            if self.remaining_life <= 0:
+                self.is_game_over = True
+                self.is_won = False
 
-        dist = self.get_distance()
+            return False
 
-        # 距離に応じてスター数を判定
-        for stars in range(5, 0, -1):
-            if dist <= STAR_THRESHOLDS[stars]:
-                return stars
+    def skip_turn(self):
+        """スキップターン（確定なし、ターン数と訪問セル記録のみ）"""
+        self.visited_cells.add(self.current_pos)
+        self.current_turn += 1
 
-        return 0  # 範囲外（51px以上）
+    def get_closest_speaker(self):
+        """
+        不正解時に最も近い話者を計算
 
-    def reset(self):
-        """ゲームをリセット"""
-        self.__init__()
+        Returns:
+            int: 最も近い話者のID (0, 1, または 2)
+        """
+        min_distance = float('inf')
+        closest_speaker = 0
 
+        for speaker_id, speaker_pos in self.speaker_positions.items():
+            # Manhattan距離で計算
+            distance = abs(self.current_pos[0] - speaker_pos[0]) + \
+                      abs(self.current_pos[1] - speaker_pos[1])
+
+            if distance < min_distance:
+                min_distance = distance
+                closest_speaker = speaker_id
+
+        return closest_speaker
+
+    def get_all_speaker_distances(self):
+        """
+        全話者への距離を取得
+
+        Returns:
+            dict: {speaker_id: distance, ...}
+        """
+        distances = {}
+        for speaker_id, speaker_pos in self.speaker_positions.items():
+            distance = abs(self.current_pos[0] - speaker_pos[0]) + \
+                      abs(self.current_pos[1] - speaker_pos[1])
+            distances[speaker_id] = distance
+
+        return distances
