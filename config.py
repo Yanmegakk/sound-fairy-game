@@ -31,4 +31,9 @@ SCORE_TEXT_COLOR = (255, 255, 100)
 STAR_TEXT_SIZE = 24
 DISTANCE_TEXT_SIZE = 16
 
-
+# ===== 音声設定 =====
+SAMPLE_RATE = 44100        # サンプリングレート
+MIN_FREQ = 200             # 最小周波数（Hz）
+MAX_FREQ = 2000            # 最大周波数（Hz）
+MAX_DIST = 600             # 最大探知距離（px）
+AUDIO_TONE_DURATION = 0.01  # トーン継続時間（秒）

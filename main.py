@@ -1,8 +1,11 @@
 import arcade
 import numpy as np
 import time
-from config import WIDTH, HEIGHT, PLAYER_RADIUS, SCORE_MESSAGES, SCORE_TEXT_COLOR, STAR_TEXT_SIZE, DISTANCE_TEXT_SIZE
+import threading
+import queue
+from config import WIDTH, HEIGHT, PLAYER_RADIUS, SCORE_MESSAGES, SCORE_TEXT_COLOR, STAR_TEXT_SIZE, DISTANCE_TEXT_SIZE, SAMPLE_RATE, MIN_FREQ, MAX_FREQ, MAX_DIST, AUDIO_TONE_DURATION
 from game import GameState
+import sound_manager
 
 
 class SoundFairyGame(arcade.Window):
@@ -31,6 +34,11 @@ class SoundFairyGame(arcade.Window):
         self.last_score = -1  # -1 = スコア未計算、0-5 = スコア値
         self.last_distance = 0.0  # クリック時の距離を保存
 
+        # オーディオスレッド用
+        self.audio_queue = queue.Queue(maxsize=1)  # 最新の周波数を保持
+        self.audio_thread = None
+        self.is_running = True
+
         # テキストオブジェクト（パフォーマンス向上）
         self.found_text = arcade.Text("Found!", WIDTH // 2, HEIGHT // 2, (255, 255, 100), 56,
                                        anchor_x="center", anchor_y="center")
@@ -39,6 +47,43 @@ class SoundFairyGame(arcade.Window):
 
         print("ゲーム開始")
         print("マウスを動かして目標を探してください")
+
+        # オーディオスレッドを開始
+        self.start_audio_thread()
+
+    def start_audio_thread(self):
+        """バックグラウンドでオーディオを再生するスレッドを開始"""
+        def audio_worker():
+            current_freq = 200  # デフォルト周波数
+            last_freq = None
+            last_play_time = 0  # 前回再生した時刻
+
+            while self.is_running:
+                # キューから最新の周波数を取得（ブロッキングなし）
+                try:
+                    current_freq = self.audio_queue.get(timeout=0.05)
+                except queue.Empty:
+                    pass  # キューが空の場合は前回の周波数を使用
+
+                current_time = time.time()
+
+                # 周波数が変わった、または前回再生後一定時間経過した場合のみ音を再生
+                if (last_freq != current_freq or last_freq is None or
+                    (current_time - last_play_time) >= AUDIO_TONE_DURATION):
+
+                    left_vol, right_vol, _ = sound_manager.calculate_volumes(
+                        self.game.player_pos, self.game.target_pos
+                    )
+                    sound_manager.play_stereo_sound(
+                        current_freq, left_vol, right_vol, AUDIO_TONE_DURATION
+                    )
+                    last_freq = current_freq
+                    last_play_time = current_time
+
+                time.sleep(0.05)  # 50ms ごとにチェック
+
+        self.audio_thread = threading.Thread(target=audio_worker, daemon=True)
+        self.audio_thread.start()
 
     def on_draw(self):
         """画面を描画"""
@@ -109,6 +154,15 @@ class SoundFairyGame(arcade.Window):
         # ターゲット範囲内かチェック（視覚フィードバック用）
         self.near_target = self.game.is_near_target()
 
+        # 軽量：周波数をキューに入れるだけ（オーディオスレッドで処理）
+        if not self.game.discovered:
+            dist = self.game.get_distance()
+            freq = sound_manager.calculate_frequency(dist)
+            try:
+                self.audio_queue.put_nowait(freq)  # ブロッキングなし
+            except queue.Full:
+                pass  # キューが満杯の場合は無視（古い値は破棄）
+
     def on_mouse_motion(self, x, y, dx, dy):
         """マウス移動時の処理"""
         self.mouse_x = x
@@ -140,6 +194,7 @@ class SoundFairyGame(arcade.Window):
             self.near_target = False  # 範囲内フラグもリセット
         # Q キー: 終了
         elif key == arcade.key.Q:
+            self.is_running = False  # オーディオスレッドを停止
             arcade.close_window()
 
 
